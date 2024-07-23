@@ -1,36 +1,7 @@
 # RazoreaterII_Rift-Rest-Reminder
-This script monitors the recent ranked games of a League of Legends player and suggests taking a break if the player has lost a certain number of games within a specified timeframe.
 
-<#
-.SYNOPSIS
-This script monitors the recent ranked games of a League of Legends player and suggests taking a break if the player has lost a certain number of games within a specified timeframe.
-
-.DESCRIPTION
-The bot interfaces with the Riot Games API to fetch a player's match history and determine if they are on a losing streak. 
-If the conditions are met (i.e., a specified number of games lost within a specified timeframe), the script will prompt the user to take a break 
-and automatically close the League of Legends client.
-
-.PARAMETER apiKey
-The personal API key for accessing the Riot Games API.
-
-.PARAMETER playerName
-The username of the League of Legends player whose statistics are being monitored.
-
-.PARAMETER gameTag
-The region or tag associated with the player's account.
-
-.PARAMETER hoursToCheck
-The duration in hours to look back for games. For example, if set to 2, it will check if the player has lost games in the last 2 hours.
-
-.PARAMETER gamesToCheck
-The number of recent games you want to evaluate to determine a losing streak. It is best to set this to 2 or 3.
-
-.PARAMETER rankedOnly
-A boolean value to indicate whether only ranked games should be checked. Valid values are $true or $false.
-
-#>
-
-
+A PowerShell script that uses the RIOT API to check the last games of a player (especially ranked - configurable), if the player has lost the last X games (configurable), the Riot Client is closed until a certain time (configurable) has elapsed.
+This prevents the player from entering a negative state and losing further games. It has been found that if at least 2 or 3 games have been lost in a row, the further games will probably also be lost, as the player is in a negative mental state.
 
 #windows_task_Scheduling_rift_rest_reminder.xml
 Change the following values:
