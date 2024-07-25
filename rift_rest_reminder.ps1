@@ -28,12 +28,47 @@ A boolean value to indicate whether only ranked games should be checked. Valid v
 #>
 
 # Define user-configurable parameters
-$apiKey = "" # Your Riot Games API key
+$textFilePath= Join-Path -Path $PSScriptRoot -ChildPath "Api_key.key"
+$apiKey  = Get-Content -Path $textFilePath
+Write-Host "Your API Key: $apiKey"
 $playerName = 'Raz0reater' # The player's summoner name
 $gameTag = "EUW" # The player's region or game tag (e.g., EUW, NA)
-$hoursToCheck = 3 # Check for losses in the last 2 hours
+$hoursToCheck = 1 # Check for losses in the last 1 hours
 $gamesToCheck = 2 # Number of games to evaluate for a losing streak
 $rankedOnly = $true # Check only ranked games (true/false)
+
+    # Laden Sie das Windows Forms Assembly
+Add-Type -AssemblyName System.Windows.Forms
+
+# Definieren Sie die Funktion, um das Textfenster anzuzeigen
+function ShowMessage {
+    param (
+        [string]$message,
+        [int]$duration = 3000  # Dauer in Millisekunden
+    )
+
+    # Erstellen Sie ein neues Form
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Information"
+    $form.Size = New-Object System.Drawing.Size(300, 150)
+    $form.StartPosition = "CenterScreen"
+
+    # Fügen Sie ein Label hinzu
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = $message
+    $label.AutoSize = $true
+    $label.Location = New-Object System.Drawing.Point(10,10)
+    $form.Controls.Add($label)
+
+    # Zeigen Sie das Form an
+    $form.Show()
+
+    # Schließen Sie das Form nach der angegebenen Dauer
+    Start-Sleep -Milliseconds $duration
+    $form.Close()
+}
+
+ShowMessage -message "League Rest Reminder was succesfully started." -duration 3000
 
 function Get-RecentGames {
     param (
