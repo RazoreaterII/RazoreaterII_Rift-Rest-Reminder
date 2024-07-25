@@ -27,20 +27,31 @@ A boolean value to indicate whether only ranked games should be checked. Valid v
 
 #>
 
-# Define user-configurable parameters
+# Get API Key
 $textFilePath= Join-Path -Path $PSScriptRoot -ChildPath "Api_key.key"
 $apiKey  = Get-Content -Path $textFilePath
 Write-Host "Your API Key: $apiKey"
+
+# Define user-configurable parameters
 $playerName = 'Raz0reater' # The player's summoner name
 $gameTag = "EUW" # The player's region or game tag (e.g., EUW, NA)
 $hoursToCheck = 1 # Check for losses in the last 1 hours
 $gamesToCheck = 2 # Number of games to evaluate for a losing streak
 $rankedOnly = $true # Check only ranked games (true/false)
 
-    # Laden Sie das Windows Forms Assembly
-Add-Type -AssemblyName System.Windows.Forms
 
-# Definieren Sie die Funktion, um das Textfenster anzuzeigen
+
+# Create LogFolder and logfile
+New-Item -Path "$env:LOCALAPPDATA\RiftRestReminder" -ItemType Directory -ErrorAction SilentlyContinue
+$logFile = "$env:LOCALAPPDATA\RiftRestReminder\log.txt"
+
+function Get-TimeStamp {
+    
+    return "[{0:MM/dd/yy} {0:HH:mm:ss}]" -f (Get-Date)
+}
+
+
+
 function ShowMessage {
     param (
         [string]$message,
@@ -48,6 +59,7 @@ function ShowMessage {
     )
 
     # Erstellen Sie ein neues Form
+    Add-Type -AssemblyName System.Windows.Forms
     $form = New-Object System.Windows.Forms.Form
     $form.Text = "Information"
     $form.Size = New-Object System.Drawing.Size(300, 150)
@@ -88,9 +100,9 @@ function Get-RecentGames {
     $summonerResponse = Invoke-RestMethod -Uri $puuidUrl -Method Get
     $mypuuid = $summonerResponse.puuid
 
-    Write-Host "Puuid for player $playerName with tag $gameTag : $mypuuid"
-    Write-Host "Checking the last $hoursToCheck hours for $gamesToCheck games (Ranked Only: $rankedOnly)"
-    Write-Host "#########################################"
+    Write-Output "$(Get-TimeStamp) Puuid for player $playerName with tag $gameTag : $mypuuid" | Out-file $logFile -append
+    Write-Output "$(Get-TimeStamp) Checking the last $hoursToCheck hours for $gamesToCheck games (Ranked Only: $rankedOnly)" | Out-file $logFile -append
+
 
     # Get the last match IDs
     $matchHistoryUrl = "https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/$mypuuid/ids?" + $rankedParam + "start=0&count=$gamesToCheck&api_key=$apiKey"
@@ -110,10 +122,10 @@ function Get-RecentGames {
     }
 
     if ($lostGames.Count -eq $gamesToCheck -and $lostGames -notcontains $true) {
-        Write-Host "All games were lost within the last $hoursToCheck hours."
+        Write-Output "$(Get-TimeStamp) All games were lost within the last $hoursToCheck hours." | Out-file $logFile -append
         QuitLeagueClient
     } else {
-        Write-Host "Not all games were lost within the specified time. Keep playing!"
+        Write-Output "$(Get-TimeStamp) Not all games were lost within the specified time. Keep playing!" | Out-file $logFile -append
     }
 }
 
@@ -127,7 +139,7 @@ function CheckGameTimeValidity {
 
     # Ensure matchInfo and gameEndTimestamp are provided
     if (-not $matchInfo -or -not $matchInfo.info.gameEndTimestamp) {
-        Write-Error "Invalid matchInfo provided. Ensure it contains the gameEndTimestamp."
+        Write-Output "$(Get-TimeStamp) Invalid matchInfo provided. Ensure it contains the gameEndTimestamp." | Out-file $logFile -append
         return $false
     }
 
@@ -137,7 +149,7 @@ function CheckGameTimeValidity {
     try {
         $gameEndDateTime = [datetimeoffset]::FromUnixTimeMilliseconds($gameendtimestamp)
     } catch {
-        Write-Error "Error converting gameEndTimestamp to DateTime: $_"
+        Write-Output "$(Get-TimeStamp) [ERROR] Error converting gameEndTimestamp to DateTime: $_" | Out-file $logFile -append
         return $false
     }
 
@@ -161,15 +173,15 @@ function CheckGameOutcome {
     if ($participant) {
         $winStatus = $participant.win
         if ($winStatus -eq $false) {
-            Write-Output "Game $match was lost."
+            Write-Output "$(Get-TimeStamp) Game $match was lost." | Out-file $logFile -append
             $lostgame  += $false
         } else {
-            Write-Output "The game $match was won."                    
+            Write-Output "$(Get-TimeStamp) The game $match was won." | Out-file $logFile -append                   
             $lostgame += $true
         }
 
     } else {
-        Write-Host "Participant with puuid ' $mypuuid' not found."
+        Write-Output "$(Get-TimeStamp) Participant with puuid '$mypuuid' not found."| Out-file $logFile -append
     }
 }
 
@@ -183,12 +195,12 @@ function QuitLeagueClient {
         [System.Windows.Forms.MessageBox]::Show("You have lost $gamesToCheck games in a row. It's time for a break! The League client will be closed. Break time: $hoursToCheck Hour(s).", 
         "League Mental Health Alert", [System.Windows.Forms.MessageBoxButtons]::OK)
     } else {
-        Write-Host "$processName is not running."
+        Write-Output "$(Get-TimeStamp) $processName is not running."| Out-file $logFile -append
     }
 }
 
 while ($true) {
     Get-RecentGames -playerName $playerName -apiKey $apiKey -hoursToCheck $hoursToCheck -gamesToCheck $gamesToCheck -gameTag $gameTag -rankedOnly $rankedOnly
-    Write-Host "Sleeping for 60 seconds before the next check."
+    Write-Output "$(Get-TimeStamp) Sleeping for 60 seconds before the next check."| Out-file $logFile -append
     Start-Sleep -Seconds 60
 }
