@@ -40,16 +40,14 @@ $gamesToCheck = 2 # Number of games to evaluate for a losing streak
 $rankedOnly = $true # Check only ranked games (true/false)
 
 
-
 # Create LogFolder and logfile
 New-Item -Path "$env:LOCALAPPDATA\RiftRestReminder" -ItemType Directory -ErrorAction SilentlyContinue
-$logFile = "$env:LOCALAPPDATA\RiftRestReminder\log.txt"
+$logFile = "$env:LOCALAPPDATA\RiftRestReminder\RiftReminder.log"
 
 function Get-TimeStamp {
     
     return "[{0:MM/dd/yy} {0:HH:mm:ss}]" -f (Get-Date)
 }
-
 
 
 function ShowMessage {
@@ -117,14 +115,17 @@ function Get-RecentGames {
 
         if (CheckGameTimeValidity $matchInfo $hoursToCheck) {
             $validGamesCount++
-            $lostGames += CheckGameOutcome $matchInfo $mypuuid
+            $outcome = CheckGameOutcome $matchInfo $mypuuid
+            $lostGames += $outcome
         } 
     }
-
-    if ($lostGames.Count -eq $gamesToCheck -and $lostGames -notcontains $true) {
+    $lostgamesCount = $lostGames | Measure-Object | Select-Object -ExpandProperty Count
+    Write-Output "$(Get-TimeStamp) Number of lost games: $lostgamesCount." | Out-file $logFile -append  
+    if ($lostgamesCount -eq $gamesToCheck -and $lostGames -notcontains $true) {
         Write-Output "$(Get-TimeStamp) All games were lost within the last $hoursToCheck hours." | Out-file $logFile -append
         QuitLeagueClient
     } else {
+    
         Write-Output "$(Get-TimeStamp) Not all games were lost within the specified time. Keep playing!" | Out-file $logFile -append
     }
 }
@@ -173,11 +174,9 @@ function CheckGameOutcome {
     if ($participant) {
         $winStatus = $participant.win
         if ($winStatus -eq $false) {
-            Write-Output "$(Get-TimeStamp) Game $match was lost." | Out-file $logFile -append
-            $lostgame  += $false
-        } else {
-            Write-Output "$(Get-TimeStamp) The game $match was won." | Out-file $logFile -append                   
-            $lostgame += $true
+            return $false
+        } else {                
+            return $true
         }
 
     } else {
@@ -201,6 +200,5 @@ function QuitLeagueClient {
 
 while ($true) {
     Get-RecentGames -playerName $playerName -apiKey $apiKey -hoursToCheck $hoursToCheck -gamesToCheck $gamesToCheck -gameTag $gameTag -rankedOnly $rankedOnly
-    Write-Output "$(Get-TimeStamp) Sleeping for 60 seconds before the next check."| Out-file $logFile -append
     Start-Sleep -Seconds 60
 }
